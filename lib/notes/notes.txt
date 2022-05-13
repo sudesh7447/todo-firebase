@@ -1,0 +1,129 @@
+Firebase :
+packages
+firebase_core: to initialise firebase
+firebase_auth: for user authentication
+cloud_firestore: to store data in firebase
+pub get
+
+step 1 :
+go in app level build.gradle then defaultconfig
+copy paste application id in firebase project
+make minsdk version 19
+make multiDexEnabled true
+
+step 2:
+download googlejson file and put it in app directory
+
+step 3:
+put this two in dependencies of app level build gradle -->
+implementation platform('com.google.firebase:firebase-bom:30.0.0')
+implementation 'com.google.firebase:firebase-analytics'
+
+put
+apply plugin: 'com.google.gms.google-services'
+this at very bottom of app level build gradle
+
+step 4:
+put this
+classpath 'com.google.gms:google-services:4.3.10'
+in android level build.gradle
+
+To initialise firebase
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); --**
+  await Firebase.initializeApp(); --**
+  runApp(const MyApp());
+}
+add async and these two starred lines in main.dart
+
+to authenticate and enter with sending data to firestore
+
+  startauth() {
+    final validity = _formkey.currentState!.validate();
+    FocusScope.of(context).unfocus();
+    if (validity) {
+      _formkey.currentState!.save();
+      submitform(_email, _password, _username);
+    } else {}
+  }
+
+  submitform(String email, String password, String username) async {
+    final auth = FirebaseAuth.instance;
+
+    UserCredential authResult;
+    try {
+      if (isloginpage) {
+        authResult = await auth.signInWithEmailAndPassword(
+            email: email, password: password);
+      } else {
+        authResult = await auth.createUserWithEmailAndPassword(
+            email: email, password: password);
+        String uid = authResult.user!.uid;
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .set({'username': username, 'email': email});
+      }
+    } catch (error) {
+      print(error);
+    }
+  }
+
+How to logout :
+() async {await FirebaseAuth.instance.signOut();},
+
+pushing todos in firestore database
+
+addtasktofirebase() async {
+    FirebaseAuth auth = FirebaseAuth.instance;
+    final User user = await auth.currentUser!;
+    String uid = user.uid;
+    var time = DateTime.now();
+    await FirebaseFirestore.instance
+        .collection('tasks')  // Main collection tasks
+        .doc(uid)                // inside tasks a document with name uid of user
+        .collection('mytask')   // inside uid document personal toodo collection of user mytask
+        .doc(time.toString())   // naming that toda as current time
+        .set({                              // setting all three fields in doc
+      'title': titlecontroller.text,
+      'description': detailcontroller.text,
+      'time': time.toString()
+    });
+    Fluttertoast.showToast(msg: 'task added');
+  }
+
+showing only users todos in homepage
+streambuilder :- streambuilder rebuilds with every new event
+-->>  using StreamBuilder with QuerySnapshot
+
+StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('tasks')
+              .doc(uid)
+              .collection('mytask')
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(
+                child: CircularProgressIndicator(),
+              );
+            } else {
+              final docData = snapshot.data!.docs;
+              return ListView.builder(
+                itemCount: docData.length,
+                itemBuilder: (context, index) {
+                  return Container(
+                    child: Column(
+                      children: [
+                        Text(docData[index]['title']),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }
+          },
+        ),
+
+
+
